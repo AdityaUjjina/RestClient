@@ -1,7 +1,10 @@
 package com.jamasoftware.services.restclient.httpconnection;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.jamasoftware.services.restclient.exception.JamaApiException;
 import com.jamasoftware.services.restclient.exception.RestClientException;
+
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpRequest;
@@ -18,14 +21,22 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicHttpRequest;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
 import org.apache.http.util.EntityUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import javax.crypto.SecretKey;
 import javax.net.ssl.SSLContext;
 import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -34,6 +45,7 @@ public class ApacheHttpClient implements HttpClient {
     private final Logger log = Logger.getLogger(ApacheHttpClient.class.getName());
 
     private org.apache.http.client.HttpClient client;
+    private String jwtToken;
 
     public ApacheHttpClient() throws RestClientException {
         PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
@@ -64,6 +76,7 @@ public class ApacheHttpClient implements HttpClient {
                     .setSSLSocketFactory(sslsf)
                     .setSSLContext(sslContext)
                     .build();
+            this.jwtToken = "";
         }
         catch (Exception e)
         {
@@ -79,8 +92,45 @@ public class ApacheHttpClient implements HttpClient {
             throw new RestClientException("Unable to create authentication header");
         }
     }
+    
+    private Header getAuthenticationHeader(UsernamePasswordCredentials credentials, HttpRequest request, boolean oauth) throws RestClientException {
+    	if(!oauth)
+    		return getAuthenticationHeader(credentials, request);
+    	Header herder = null;
+    	try {
+			URI uri = new URI(request.getRequestLine().getUri());
+			String tokenurl = uri.getScheme() + "://" +  uri.getHost() + "/rest/oauth/token";
+			HttpPost token = new HttpPost(tokenurl);
+        	Header basicHeader = new BasicScheme().authenticate(credentials, token, null);
+        	token.addHeader(basicHeader);
+        	token.addHeader(new BasicHeader("Content-Type", "application/x-www-form-urlencoded"));
+        	token.setEntity(new StringEntity("grant_type=client_credentials"));
+        	Response response = execute(token);
+        	JSONObject object = new JSONObject(response.getResponse());
+        	System.out.println(jwtToken);
+        	if (jwtToken.isEmpty() || ! isTokenValid()) {
+    			System.out.println("creating new token");
+    			jwtToken = (String) object.get("access_token");
+    		}
+        	return new BasicHeader("Authorization", "Bearer " + jwtToken);
+        } catch(AuthenticationException | URISyntaxException e) {
+            log.log(Level.SEVERE, e.toString(), e);
+            throw new RestClientException("Unable to create authentication header");
+        } catch (UnsupportedEncodingException e) {
+        	log.log(Level.SEVERE, e.toString(), e);
+		} catch (JSONException e) {
+			log.log(Level.SEVERE, e.toString(), e);
+		}
+    	return herder;
+    }
 
-    private String getEntityContentOrNull(HttpEntity responseEntity) {
+    private boolean isTokenValid() {
+    	DecodedJWT decodedJWT = JWT.decode(jwtToken);
+    	Date expiresAt = decodedJWT.getExpiresAt();
+    	return expiresAt.after(new Date());
+	}
+
+	private String getEntityContentOrNull(HttpEntity responseEntity) {
         try {
 //            return (new BufferedReader(new InputStreamReader(responseEntity.getContent()))).readLine();
             return (new BufferedReader(new InputStreamReader(responseEntity.getContent(), "UTF-8"))).readLine();
@@ -89,10 +139,29 @@ public class ApacheHttpClient implements HttpClient {
         }
     }
 
-    private Response execute(HttpRequestBase request, UsernamePasswordCredentials credentials) throws RestClientException {
+    private Response execute(HttpRequestBase request, UsernamePasswordCredentials credentials, boolean oauth) throws RestClientException {
         HttpEntity responseEntity = null;
         try {
-            request.addHeader(getAuthenticationHeader(credentials, request));
+            request.addHeader(getAuthenticationHeader(credentials, request, oauth));
+            HttpResponse rawResponse = client.execute(request);
+            responseEntity = rawResponse.getEntity();
+            return new Response(rawResponse.getStatusLine().getStatusCode(),
+                    getEntityContentOrNull(rawResponse.getEntity()));
+        } catch(IOException e) {
+            throw new RestClientException(e);
+        } finally {
+            try {
+                EntityUtils.consume(responseEntity);
+            } catch(IOException e) {
+                // Not throwing here because it's clean up
+                log.log(Level.SEVERE, e.toString(), e);
+            }
+        }
+    }
+    
+    private Response execute(HttpRequestBase request) throws RestClientException {
+        HttpEntity responseEntity = null;
+        try {
             HttpResponse rawResponse = client.execute(request);
             responseEntity = rawResponse.getEntity();
             return new Response(rawResponse.getStatusLine().getStatusCode(),
@@ -109,32 +178,33 @@ public class ApacheHttpClient implements HttpClient {
         }
     }
 
-    public Response get(String url, String username, String password, String apiKey) throws RestClientException {
+    public Response get(String url, String username, String password, String apiKey, boolean oauth) throws RestClientException {
 //        System.out.println("GET: " + url);
         HttpGet getRequest = new HttpGet(url);
         if(apiKey != null)
             getRequest.setHeader("api-key", apiKey);
         UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(username, password);
-        Response response = execute(getRequest, credentials);
+        Response response = execute(getRequest, credentials, oauth);
+        System.out.println(response.getResponse());
         if (response.getStatusCode() >= 400) {
             throw new JamaApiException(response.getStatusCode(), response.getResponse() + "\nURL: " + url);
         }
         return response;
     }
 
-    public Response delete(String url, String username, String password, String apiKey) throws RestClientException {
+    public Response delete(String url, String username, String password, String apiKey, boolean oauth) throws RestClientException {
         UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(username, password);
         HttpDelete deleteRequest = new HttpDelete(url);
         if(apiKey != null)
             deleteRequest.setHeader("api-key", apiKey);
-        Response response = execute(deleteRequest, credentials);
+        Response response = execute(deleteRequest, credentials, oauth);
         if (response.getStatusCode() >= 400) {
             throw new JamaApiException(response.getStatusCode(), response.getResponse() + "\nURL: " + url);
         }
         return response;
     }
 
-    public Response post(String url, String username, String password, String apiKey, String payload) throws RestClientException {
+    public Response post(String url, String username, String password, String apiKey, String payload, boolean oauth) throws RestClientException {
         UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(username, password);
         HttpPost postRequest = new HttpPost(url);
         if(apiKey != null)
@@ -142,14 +212,14 @@ public class ApacheHttpClient implements HttpClient {
         StringEntity body = new StringEntity(payload, "UTF-8");
         body.setContentType("application/json");
         postRequest.setEntity(body);
-        Response response = execute(postRequest, credentials);
+        Response response = execute(postRequest, credentials, oauth);
         if(response.getStatusCode() >= 400) {
             throw new JamaApiException(response.getStatusCode(), response.getResponse() + "\nURL: " + url + "\nPayload: " + payload);
         }
         return response;
     }
 
-    public Response put(String url, String username, String password, String apiKey, String payload) throws RestClientException {
+    public Response put(String url, String username, String password, String apiKey, String payload, boolean oauth) throws RestClientException {
         System.out.println("PUT: " + url);
         UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(username, password);
         HttpPut putRequest = new HttpPut(url);
@@ -158,7 +228,7 @@ public class ApacheHttpClient implements HttpClient {
         StringEntity body = new StringEntity(payload, "UTF-8");
         body.setContentType("application/json");
         putRequest.setEntity(body);
-        Response response = execute(putRequest, credentials);
+        Response response = execute(putRequest, credentials, oauth);
         if(response.getStatusCode() >= 400) {
             throw new JamaApiException(response.getStatusCode(), response.getResponse() + "\nURL: " + url + "\nPayload: " + payload);
         }
@@ -166,7 +236,7 @@ public class ApacheHttpClient implements HttpClient {
     }
 
 
-    public Response putFile(String url, String username, String password, String apiKey, File file) throws RestClientException {
+    public Response putFile(String url, String username, String password, String apiKey, File file, boolean oauth) throws RestClientException {
         UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(username, password);
         HttpPut putRequest = new HttpPut(url);
         if(apiKey != null)
@@ -176,21 +246,21 @@ public class ApacheHttpClient implements HttpClient {
         multipartEntityBuilder.setContentType(ContentType.MULTIPART_FORM_DATA);
         HttpEntity fileEntity = multipartEntityBuilder.build();
         putRequest.setEntity(fileEntity);
-        Response response = execute(putRequest, credentials);
+        Response response = execute(putRequest, credentials, oauth);
         if(response.getStatusCode() >= 400) {
             throw new JamaApiException(response.getStatusCode(), response.getResponse() + "\nURL: " + url + ", Filename: " + file.getName());
         }
         return response;
     }
 
-    public FileResponse getFile(String url, String username, String password, String apiKey) throws RestClientException {
+    public FileResponse getFile(String url, String username, String password, String apiKey, boolean oauth) throws RestClientException {
         UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(username, password);
         HttpEntity responseEntity = null;
         HttpGet request = new HttpGet(url);
         if(apiKey != null)
             request.setHeader("api-key", apiKey);
         try {
-            request.addHeader(getAuthenticationHeader(credentials, request));
+            request.addHeader(getAuthenticationHeader(credentials, request, oauth));
             HttpResponse rawResponse = client.execute(request);
             responseEntity = rawResponse.getEntity();
             return new FileResponse(rawResponse.getStatusLine().getStatusCode(),
@@ -206,4 +276,12 @@ public class ApacheHttpClient implements HttpClient {
             }
         }
     }
+
+	public String getToken() {
+		return jwtToken;
+	}
+
+	public void setToken(String token) {
+		this.jwtToken = token;
+	}
 }

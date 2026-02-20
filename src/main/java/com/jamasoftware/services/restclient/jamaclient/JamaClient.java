@@ -21,16 +21,18 @@ public class JamaClient {
     private String baseUrl;
     private String linkUrl;
     private String apiKey = null;
+    private boolean oauth;
 
-    public JamaClient(HttpClient httpClient, JsonHandler json, String baseUrl, String username, String password) {
+    public JamaClient(HttpClient httpClient, JsonHandler json, String baseUrl, String username, String password, boolean oauth) {
         this.httpClient = httpClient;
         this.json = json;
         this.baseUrl = baseUrl;
         this.username = username;
         this.password = password;
+        this.oauth = oauth;
     }
 
-    public JamaClient(HttpClient httpClient, JsonHandler json, String baseUrl, String username, String password, String linkUrl, String apiKey) {
+    public JamaClient(HttpClient httpClient, JsonHandler json, String baseUrl, String username, String password, String linkUrl, String apiKey, boolean oauth) {
         this.httpClient = httpClient;
         this.json = json;
         this.baseUrl = baseUrl;
@@ -38,10 +40,11 @@ public class JamaClient {
         this.password = password;
         this.linkUrl = linkUrl;
         this.apiKey = apiKey;
+        this.oauth = oauth;
     }
 
     public JamaDomainObject getResource(String resource, JamaInstance jamaInstance) throws RestClientException {
-        Response response = httpClient.get(baseUrl + resource, username, password, apiKey);
+        Response response = httpClient.get(baseUrl + resource, username, password, apiKey, oauth);
         return json.deserialize(response.getResponse(), jamaInstance);
     }
 
@@ -55,7 +58,7 @@ public class JamaClient {
 
 
     public JamaPage getPage(String url, String startAt, JamaInstance jamaInstance) throws RestClientException {
-        Response response = httpClient.get(url + startAt, username, password, apiKey);
+        Response response = httpClient.get(url + startAt, username, password, apiKey, oauth);
         JamaPage page = json.getPage(response.getResponse(), jamaInstance);
         page.setJamaClient(this);
         page.setUrl(url);
@@ -75,15 +78,15 @@ public class JamaClient {
 
 
     public void ping() throws RestClientException {
-        httpClient.get(baseUrl, username, password, apiKey);
+        httpClient.get(baseUrl, username, password, apiKey, oauth);
     }
 
     public void putRaw(String url, String payload) throws RestClientException {
-        httpClient.put(url, username, password, apiKey, payload);
+        httpClient.put(url, username, password, apiKey, payload, oauth);
     }
 
     public void deleteRaw(String url) throws RestClientException {
-        httpClient.delete(url, username, password, apiKey);
+        httpClient.delete(url, username, password, apiKey, oauth);
     }
 
     public void delete(String resource) throws RestClientException {
@@ -95,7 +98,7 @@ public class JamaClient {
         putRaw(baseUrl + resource, json.serializeEdited(payload));
     }
     public Response postRaw(String url, String payload) throws RestClientException {
-        return httpClient.post(url, username, password, apiKey, payload);
+        return httpClient.post(url, username, password, apiKey, payload, oauth);
 //        System.out.println(response.getResponse());
     }
 
@@ -109,7 +112,7 @@ public class JamaClient {
         if(!baseUrl.contains(domain)){
             throw new RestClientException("Not a valid Item Type image URL: \"" + url + "\"");
         }
-        FileResponse response = httpClient.getFile(url, username, password, apiKey);
+        FileResponse response = httpClient.getFile(url, username, password, apiKey, oauth);
         return response.getFileData();
     }
 }
