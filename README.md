@@ -24,6 +24,7 @@ Please note that this client is distributed as-is as an example and will likely 
   - ```base_url```
   - ```resourceTimeOut```     - refresh time for items
   - ```apiKey```              - (optional) apiKey will be injected into requests' headers
+  - ```oauth```               - (optional) oauth will treat username to clientId and password to clientSecret and switch authentication mode to OAuth. apiKey should be blank when using oauth. possible values `true`, `false`.
   
 3. Change the name of the `jama.properties.dist`  to  `jama.properties`
 
