@@ -22,14 +22,12 @@ import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicHeader;
-import org.apache.http.message.BasicHttpRequest;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import javax.crypto.SecretKey;
 import javax.net.ssl.SSLContext;
 import java.io.*;
 import java.net.URI;
@@ -107,9 +105,7 @@ public class ApacheHttpClient implements HttpClient {
         	token.setEntity(new StringEntity("grant_type=client_credentials"));
         	Response response = execute(token);
         	JSONObject object = new JSONObject(response.getResponse());
-        	System.out.println(jwtToken);
         	if (jwtToken.isEmpty() || ! isTokenValid()) {
-    			System.out.println("creating new token");
     			jwtToken = (String) object.get("access_token");
     		}
         	return new BasicHeader("Authorization", "Bearer " + jwtToken);
@@ -179,13 +175,12 @@ public class ApacheHttpClient implements HttpClient {
     }
 
     public Response get(String url, String username, String password, String apiKey, boolean oauth) throws RestClientException {
-//        System.out.println("GET: " + url);
+        log.log(Level.FINE, "GET: " + url);
         HttpGet getRequest = new HttpGet(url);
         if(apiKey != null)
             getRequest.setHeader("api-key", apiKey);
         UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(username, password);
         Response response = execute(getRequest, credentials, oauth);
-        System.out.println(response.getResponse());
         if (response.getStatusCode() >= 400) {
             throw new JamaApiException(response.getStatusCode(), response.getResponse() + "\nURL: " + url);
         }
@@ -220,7 +215,7 @@ public class ApacheHttpClient implements HttpClient {
     }
 
     public Response put(String url, String username, String password, String apiKey, String payload, boolean oauth) throws RestClientException {
-        System.out.println("PUT: " + url);
+        log.log(Level.FINE, "PUT: " + url);
         UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(username, password);
         HttpPut putRequest = new HttpPut(url);
         if(apiKey != null)
