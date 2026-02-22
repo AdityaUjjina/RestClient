@@ -146,6 +146,32 @@ public class JamaInstance implements JamaDomainObject {
         }
         return item;
     }
+    
+    public List<JamaItem> findItem(int projectId, String searchstring) throws RestClientException {
+    	List<JamaItem> items = new ArrayList<>();
+    	StringBuilder builder = new StringBuilder("abstractitems");
+    	if(projectId>0) {
+    		builder.append("?");
+    		builder.append("project=" + projectId);
+    	}
+    	if (searchstring!=null) {
+    		if (builder.toString().contains("?")) {
+    			builder.append("&");
+    		} else {
+    			builder.append("?");
+    		}
+    		builder.append("contains=" + searchstring);
+    	}
+    	String resource = builder.toString();
+    	System.out.println(resource);
+    	
+    	List<JamaDomainObject> jamaDomainObjects =  jamaClient.getAll(jamaConfig.getBaseUrl() + resource, this);
+    	for(JamaDomainObject jamaDomainObject : jamaDomainObjects) {
+    		if (jamaDomainObject instanceof JamaItem)
+    			items.add((JamaItem) jamaDomainObject);
+    	}
+    	return items;
+    }
 
     public JamaRelationship getRelationship(int id) throws RestClientException {
         String key = JamaRelationship.class.getName() + id;
