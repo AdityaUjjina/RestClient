@@ -62,7 +62,10 @@ Please note that this client is distributed as-is as an example and will likely 
 - PUT a relationship with updated fromItem, toItem, and/or relationshipType
 - POST a newly created relationship
 
-
+##### Attachments
+- GET all attachments of an item
+- PUT/POST attachments to an item
+- DELETE attachments from an item
 
 ## Usage Examples
 #### GET all Item Types in a Jama Instance 
@@ -222,6 +225,48 @@ try {
     JamaRelationship relationship = fromItem.getDownstreamRelationships().get(0);
     JamaRelationship updatedRelationship = relationship.edit().setFromItem(fromItem).setToItem(toItem).setRelationshipType(relationshipType).commit();
     System.out.println(updatedRelationship);
+} catch(RestClientException e) {
+    e.printStackTrace();
+}
+```
+
+#### GET all attachments from item
+```
+try {
+
+    JamaInstance jamaInstance = new JamaInstance(new JamaConfig(true));
+    List<JamaAttachment> attachments=jamaInstance.getItemAttachment(2209261);
+
+    for(JamaAttachment attachment:attachments) {
+        System.out.println(attachment.getItem().getId() + " " + attachment.getId());
+    }
+} catch(RestClientException e) {
+    e.printStackTrace();
+}
+```
+
+#### PUT/POST attachments to item
+```
+try {
+
+    JamaInstance jamaInstance = new JamaInstance(new JamaConfig(true));
+    int attachmentId = jamaInstance.postProjectAttachment(170, "test.txt", "");
+    jamaInstance.putAttachmentFile(attachmentId, "test.txt");
+    jamaInstance.postItemAttachment(480832, attachmentId);
+} catch(RestClientException e) {
+    e.printStackTrace();
+}
+```
+
+#### DELETE attachments from item
+```
+try {
+
+    JamaInstance jamaInstance = new JamaInstance(new JamaConfig(true));
+    List<JamaAttachment> attachments=jamaInstance.getItemAttachment(480832);
+    for(JamaAttachment attachment:attachments) {
+        jamaInstance.deleteAttachment(attachment.getItem().getId(), attachment.getId());
+    }
 } catch(RestClientException e) {
     e.printStackTrace();
 }

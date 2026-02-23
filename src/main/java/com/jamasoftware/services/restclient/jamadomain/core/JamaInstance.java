@@ -4,17 +4,22 @@ import com.jamasoftware.services.restclient.JamaConfig;
 import com.jamasoftware.services.restclient.JamaParent;
 import com.jamasoftware.services.restclient.jamadomain.lazyresources.*;
 import com.jamasoftware.services.restclient.exception.RestClientException;
+import com.jamasoftware.services.restclient.httpconnection.Response;
 import com.jamasoftware.services.restclient.jamaclient.JamaClient;
 import com.jamasoftware.services.restclient.jamadomain.stagingresources.StagingItem;
 import com.jamasoftware.services.restclient.jamadomain.stagingresources.StagingRelationship;
 import com.jamasoftware.services.restclient.jamadomain.stagingresources.StagingResource;
 import com.jamasoftware.services.restclient.util.CompareUtil;
 
+import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class JamaInstance implements JamaDomainObject {
     private JamaClient jamaClient;
@@ -163,7 +168,6 @@ public class JamaInstance implements JamaDomainObject {
     		builder.append("contains=" + searchstring);
     	}
     	String resource = builder.toString();
-    	System.out.println(resource);
     	
     	List<JamaDomainObject> jamaDomainObjects =  jamaClient.getAll(jamaConfig.getBaseUrl() + resource, this);
     	for(JamaDomainObject jamaDomainObject : jamaDomainObjects) {
@@ -171,6 +175,42 @@ public class JamaInstance implements JamaDomainObject {
     			items.add((JamaItem) jamaDomainObject);
     	}
     	return items;
+    }
+
+    public int postProjectAttachment(int projectID, String name, String description) throws RestClientException, JSONException {
+        String url=jamaConfig.getBaseUrl() + "projects/" + projectID + "/attachments";
+        String payload="{\"fields\": {\"name\": \"" + name + "\", \"description\": \"" + description + "\"}}";
+        Response response=jamaClient.postRaw(url, payload);
+        JSONObject responsejson = new JSONObject(response.getResponse());
+        return (int) ((JSONObject) responsejson.get("meta")).get("id");
+    }
+
+    public void putAttachmentFile(int attachmentId, String filepath) throws RestClientException {
+        String url = jamaConfig.getBaseUrl() + "attachments/" + attachmentId + "/file";
+        File attachmentFile = new File(filepath);
+        Response response=jamaClient.putAttachment(url, attachmentFile);
+        if (response.getStatusCode()!=200)
+            throw new RestClientException("Couldn't put file to Jama. Status code " + response.getStatusCode());
+    }
+
+    public void postItemAttachment(int itemId, int attachmentId) throws JSONException, RestClientException {
+        String url = jamaConfig.getBaseUrl() + "items/" + itemId + "/attachments";
+        JSONObject object = new JSONObject();
+        object.put("attachment", attachmentId);
+        String payload = object.toString();
+        Response response=jamaClient.postRaw(url, payload);
+        if(response.getStatusCode()>=400)
+            throw new RestClientException("Couldn't post attachment to item " + itemId);
+    }
+
+    public List<JamaAttachment> getItemAttachment(int itemId) throws RestClientException, JSONException {
+        String url = jamaConfig.getBaseUrl() + "items/" + itemId + "/attachments";
+        return jamaClient.getAttachment(url, this, itemId);
+    }
+
+    public void deleteAttachment(int itemId, int attachmentId) throws RestClientException {
+        String url = jamaConfig.getBaseUrl() + "items/" + itemId + "/attachments/" + attachmentId;
+        jamaClient.deleteRaw(url);
     }
 
     public JamaRelationship getRelationship(int id) throws RestClientException {
