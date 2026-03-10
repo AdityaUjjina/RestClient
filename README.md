@@ -49,6 +49,8 @@ Please note that this client is distributed as-is as an example and will likely 
 - Change an item's location 
 - GET all downstream/upstream related items
 - DELETE an item using its ID
+- GET immediate workflow transition options
+- POST an item workflow transition
 
 ##### Relationship Types
 - GET all relationship types in a project
@@ -266,6 +268,23 @@ try {
     List<JamaAttachment> attachments=jamaInstance.getItemAttachment(480832);
     for(JamaAttachment attachment:attachments) {
         jamaInstance.deleteAttachment(attachment.getItem().getId(), attachment.getId());
+    }
+} catch(RestClientException e) {
+    e.printStackTrace();
+}
+```
+
+#### GET/POST item workflow transition
+```
+try {
+
+    JamaInstance jamaInstance = new JamaInstance(new JamaConfig(true));
+    List<JamaAttachment> attachments=jamaInstance.listWorkflowTransitions(480832);
+    for (int i=0; i<object.length(); i++) {
+        JSONObject tranisition = (JSONObject) object.get(i);
+        if (tranisition.has("newStatus") && (int) tranisition.get("newStatus") == 1151) {
+            jamaInstance.executeWorkflowTransition(540048, (String) tranisition.get("id"));
+        }
     }
 } catch(RestClientException e) {
     e.printStackTrace();

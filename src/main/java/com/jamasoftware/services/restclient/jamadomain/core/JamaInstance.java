@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -320,5 +321,18 @@ public class JamaInstance implements JamaDomainObject {
             relationshipTypeList = new RelationshipTypeList(this);
         }
         return relationshipTypeList.getRelationshipTypes();
+    }
+
+    public String executeWorkflowTransition(int itemId, String stateId) throws RestClientException, JSONException {
+        String url=jamaConfig.getBaseUrl() + "items/" + itemId + "/workflowtransitions";
+        String payload="{\"transitionId\": \"" + stateId + "\",\"comment\": \"\"}";
+        Response response=jamaClient.postRaw(url, payload);
+        JSONObject responsejson = new JSONObject(response.getResponse());
+        return (String) ((JSONObject) responsejson.get("meta")).get("status");
+    }
+
+    public JSONArray listWorkflowTransitions(int itemId) throws RestClientException, JSONException {
+        String url=jamaConfig.getBaseUrl() + "items/" + itemId + "/workflowtransitionoptions";
+        return jamaClient.getAvailableWorkflowTransitions(url, this);
     }
 }

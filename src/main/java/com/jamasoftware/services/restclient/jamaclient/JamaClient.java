@@ -162,4 +162,10 @@ public class JamaClient {
         }
         return results;
     }
+
+    public JSONArray getAvailableWorkflowTransitions(String url, JamaInstance jamaInstance) throws RestClientException, JSONException {
+        Response response = httpClient.get(url, username, password, apiKey, oauth);
+        JSONObject object = new JSONObject(response.getResponse());
+        return (JSONArray) object.get("data");
+    }
 }
