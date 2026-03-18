@@ -11,4 +11,5 @@ public interface HttpClient {
     Response put(String url, String username, String password, String apiKey, String payload, boolean oauth) throws RestClientException;
     Response putFile(String url, String username, String password, String apiKey, File file, boolean oauth) throws RestClientException;
     FileResponse getFile(String url, String username, String password, String apiKey, boolean oauth) throws RestClientException;
+    Response patch(String url, String username, String password, String apiKey, String payload, boolean oauth) throws RestClientException;
 }

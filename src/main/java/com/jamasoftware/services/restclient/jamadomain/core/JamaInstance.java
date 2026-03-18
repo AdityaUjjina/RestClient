@@ -2,6 +2,7 @@ package com.jamasoftware.services.restclient.jamadomain.core;
 
 import com.jamasoftware.services.restclient.JamaConfig;
 import com.jamasoftware.services.restclient.JamaParent;
+import com.jamasoftware.services.restclient.jamadomain.fields.JamaField;
 import com.jamasoftware.services.restclient.jamadomain.lazyresources.*;
 import com.jamasoftware.services.restclient.exception.RestClientException;
 import com.jamasoftware.services.restclient.httpconnection.Response;
@@ -9,6 +10,7 @@ import com.jamasoftware.services.restclient.jamaclient.JamaClient;
 import com.jamasoftware.services.restclient.jamadomain.stagingresources.StagingItem;
 import com.jamasoftware.services.restclient.jamadomain.stagingresources.StagingRelationship;
 import com.jamasoftware.services.restclient.jamadomain.stagingresources.StagingResource;
+import com.jamasoftware.services.restclient.jamadomain.values.JamaFieldValue;
 import com.jamasoftware.services.restclient.util.CompareUtil;
 
 import java.io.File;
@@ -17,6 +19,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.Map.Entry;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -334,5 +338,22 @@ public class JamaInstance implements JamaDomainObject {
     public JSONArray listWorkflowTransitions(int itemId) throws RestClientException, JSONException {
         String url=jamaConfig.getBaseUrl() + "items/" + itemId + "/workflowtransitionoptions";
         return jamaClient.getAvailableWorkflowTransitions(url, this);
+    }
+
+    public int patchItem(int itemId, List<Map<String,Object>> listoffields) throws JSONException, RestClientException {
+        String url=jamaConfig.getBaseUrl() + "items/" + itemId;
+        List<JSONObject> list = new ArrayList<>();
+
+        for (Map<String,Object> field:listoffields) {
+            JSONObject entry = new JSONObject();
+            entry.put("op", field.get("action"));
+            Map<String, Object> fielddata = (Map<String, Object>) field.get("field");
+            entry.put("path", "/fields/" + fielddata.get("name"));
+            if(field.get("action").equals("add"))
+                entry.put("value", fielddata.get("value"));
+            list.add(entry);
+        }
+        JSONArray payload = new JSONArray(list);
+        return jamaClient.patchItem(url, payload.toString());
     }
 }

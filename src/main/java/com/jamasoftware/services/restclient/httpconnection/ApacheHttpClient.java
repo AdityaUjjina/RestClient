@@ -272,6 +272,21 @@ public class ApacheHttpClient implements HttpClient {
         }
     }
 
+    public Response patch(String url, String username, String password, String apiKey, String payload, boolean oauth) throws RestClientException {
+        UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(username, password);
+        HttpPatch patchRequest = new HttpPatch(url);
+        if(apiKey != null)
+            patchRequest.setHeader("api-key", apiKey);
+        StringEntity body = new StringEntity(payload, "UTF-8");
+        body.setContentType("application/json");
+        patchRequest.setEntity(body);
+        Response response = execute(patchRequest, credentials, oauth);
+        if(response.getStatusCode() >= 400) {
+            throw new JamaApiException(response.getStatusCode(), response.getResponse() + "\nURL: " + url + "\nPayload: " + payload);
+        }
+        return response;
+    }
+
 	public String getToken() {
 		return jwtToken;
 	}

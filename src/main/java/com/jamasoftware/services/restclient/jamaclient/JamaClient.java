@@ -7,13 +7,16 @@ import com.jamasoftware.services.restclient.httpconnection.Response;
 import com.jamasoftware.services.restclient.exception.RestClientException;
 import com.jamasoftware.services.restclient.httpconnection.HttpClient;
 import com.jamasoftware.services.restclient.jamadomain.core.LazyResource;
+import com.jamasoftware.services.restclient.jamadomain.fields.JamaField;
 import com.jamasoftware.services.restclient.jamadomain.lazyresources.JamaAttachment;
+import com.jamasoftware.services.restclient.jamadomain.values.JamaFieldValue;
 import com.jamasoftware.services.restclient.json.JsonHandler;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -167,5 +170,10 @@ public class JamaClient {
         Response response = httpClient.get(url, username, password, apiKey, oauth);
         JSONObject object = new JSONObject(response.getResponse());
         return (JSONArray) object.get("data");
+    }
+
+    public int patchItem(String url, String payload) throws RestClientException {
+        Response response = httpClient.patch(url, username, password, apiKey, payload, oauth);
+        return response.getStatusCode();
     }
 }
