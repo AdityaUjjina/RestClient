@@ -218,6 +218,11 @@ public class JamaInstance implements JamaDomainObject {
         jamaClient.deleteRaw(url);
     }
 
+    public List<JamaAttachment> getAttachmentByID(int attachmentid) throws RestClientException, JSONException {
+        String url = jamaConfig.getBaseUrl() + "abstractitems?itemType=22&contains=" + attachmentid;
+        return jamaClient.getAttachment(url, this, attachmentid);
+    }
+
     public JamaRelationship getRelationship(int id) throws RestClientException {
         String key = JamaRelationship.class.getName() + id;
         JamaRelationship relationship = (JamaRelationship) getPoolOrNull(key);

@@ -138,6 +138,10 @@ public class JamaClient {
         int totalresults = ((JSONObject) ((JSONObject) object.get("meta")).get("pageInfo")).getInt("totalResults");
 
         List<JamaAttachment> results = new ArrayList<>();
+
+        if (totalresults==0)
+            return results;
+
         for (int startAt = 0; startAt < totalresults;) {
             List<JamaAttachment> pagedresults = pagedResults(url, jamaInstance, itemId, startAt);
             results.addAll(pagedresults);
@@ -149,7 +153,12 @@ public class JamaClient {
     private List<JamaAttachment> pagedResults(String url, JamaInstance jamaInstance, int itemId, int startAt)
             throws RestClientException, JSONException {
         List<JamaAttachment> results = new ArrayList<>();
-        Response response = httpClient.get(url + "?startAt=" + startAt, username, password, apiKey, oauth);
+        String startaturl;
+        if(url.contains("?"))
+            startaturl=url + "&startAt=" + startAt;
+        else
+            startaturl=url + "?startAt=" + startAt;
+        Response response = httpClient.get(startaturl, username, password, apiKey, oauth);
         JSONObject object = new JSONObject(response.getResponse());
 
         JSONArray array = (JSONArray) object.get("data");
