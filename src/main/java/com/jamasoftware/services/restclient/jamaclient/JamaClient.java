@@ -167,7 +167,6 @@ public class JamaClient {
             JamaAttachment attachment = new JamaAttachment(jamaInstance);
             JSONObject attdata = (JSONObject) array.get(count);
             attachment.setAttachmentId(attdata.getInt("id"));
-            attachment.setItem(itemId);
             attachment.setName(attdata.getString("fileName"));
             attachment.setSize(attdata.getInt("fileSize"));
             results.add(attachment);

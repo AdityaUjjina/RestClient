@@ -1,18 +1,21 @@
 package com.jamasoftware.services.restclient.jamadomain.lazyresources;
 
-import com.jamasoftware.services.restclient.exception.RestClientException;
+import com.jamasoftware.services.restclient.jamadomain.core.JamaDomainObject;
 import com.jamasoftware.services.restclient.jamadomain.core.JamaInstance;
+import com.jamasoftware.services.restclient.jamadomain.core.LazyResource;
 
-public class JamaAttachment {
+public class JamaAttachment extends LazyResource {
 
     protected JamaItem item;
     protected String name;
     protected int size;
     protected int attachmentId;
+    protected int projectid;
+    protected int itemType;
     protected JamaInstance jamaInstance;
 
-    public JamaItem getItem() {
-        return item;
+    public JamaAttachment () {
+        this.itemType=22;
     }
 
     public String getName() {
@@ -31,7 +34,7 @@ public class JamaAttachment {
         this.size = size;
     }
 
-    public int getId() {
+    public int getAttachmentId() {
         return attachmentId;
     }
 
@@ -43,11 +46,24 @@ public class JamaAttachment {
         this.jamaInstance = jamaInstance;
     }
 
-    public void setItem(int id) throws RestClientException {
-        this.item=jamaInstance.getItem(id);
-    }
-
     public JamaAttachment(JamaInstance jamaInstance) {
         this.jamaInstance=jamaInstance;
+    }
+
+    @Override
+    protected String getResourceUrl() {
+        return "attachments/" + getId();
+    }
+
+    @Override
+    protected void copyContentFrom(JamaDomainObject jamaDomainObject) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'copyContentFrom'");
+    }
+
+    @Override
+    protected void writeContentTo(JamaDomainObject jamaDomainObject) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'writeContentTo'");
     }
 }
